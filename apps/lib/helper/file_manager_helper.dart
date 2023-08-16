@@ -3,24 +3,27 @@ import 'dart:io';
 import '../entity/dimen_data.dart';
 
 class FileManagerHelper {
-  static String handleData(
-      String inputProjectUrl, String inputPlainText, DimenData dimenData) {
-    final mProjectUrl =
-    dimenData.dimen == null ? "values" : "values-sw${dimenData.dimen}dp";
+
+  static final FileManagerHelper _instance = FileManagerHelper();
+
+  static FileManagerHelper shared = _instance;
+
+  String handleData(String inputProjectUrl, String inputPlainText, DimenData dimenData) {
+    final mProjectUrl = dimenData.dimen == null ? "values" : "values-sw${dimenData.dimen}dp";
     final listInputPlainText = inputPlainText.split(',');
-    final folderName = "$inputProjectUrl/app/src/main/res/$mProjectUrl";
+    // final folderName = "$inputProjectUrl/app/src/main/res/$mProjectUrl";
+    final folderName = "$inputProjectUrl/$mProjectUrl";
     final fileName = "$folderName/dimens.xml";
-    createFolderIfNotExisted(folderName);
-    final outputDimenPlainText =
-    getDimensionPlainText(listInputPlainText, dimenData);
-    final mData = readFileData(fileName);
-    final fileData = sortDimensionTextBeforeWrite(mData, outputDimenPlainText);
+    _createFolderIfNotExisted(folderName);
+    final outputDimenPlainText = _getDimensionPlainText(listInputPlainText, dimenData);
+    final mData = _readFileData(fileName);
+    final fileData = _sortDimensionTextBeforeWrite(mData, outputDimenPlainText);
     final content = fileData.join('\n');
-    writeDataToFile(dimenData, fileName, utf8.encode(content));
+    _writeDataToFile(dimenData, fileName, utf8.encode(content));
     return content;
   }
 
-  static void createFolderIfNotExisted(String folderName) {
+  void _createFolderIfNotExisted(String folderName) {
     if (!Directory(folderName).existsSync()) {
       final documentDirectory = Directory.systemTemp;
       final folder = Directory('$folderName');
@@ -28,7 +31,7 @@ class FileManagerHelper {
     }
   }
 
-  static List<String> getDimensionPlainText(
+  List<String> _getDimensionPlainText(
       List<String> listInputPlainText, DimenData dimenData) {
     final listDimenParamName = <String>[];
     final uniqueListDimen = <double>{};
@@ -42,13 +45,13 @@ class FileManagerHelper {
 
     for (final mDimen in sortedListDimen) {
       final prefix = '<dimen name="dimens_new_${mDimen.toInt()}dp">';
-      listDimenParamName.add(
-          '$prefix${roundf(mDimen * (dimenData.ratio))}dp</dimen>');
+      listDimenParamName
+          .add('$prefix${_roundf(mDimen * (dimenData.ratio))}dp</dimen>');
     }
     return listDimenParamName;
   }
 
-  static List<String> sortDimensionTextBeforeWrite(
+  List<String> _sortDimensionTextBeforeWrite(
       String data, List<String> outputDimenPlainText) {
     final firstLine = '<?xml version="1.0" encoding="utf-8"?>';
     final secondLine = '<resources>';
@@ -69,7 +72,7 @@ class FileManagerHelper {
     return newData;
   }
 
-  static String readFileData(String fileName) {
+  String _readFileData(String fileName) {
     final file = File(fileName);
     if (file.existsSync()) {
       try {
@@ -83,7 +86,7 @@ class FileManagerHelper {
     return '';
   }
 
-  static void writeDataToFile(
+  void _writeDataToFile(
       DimenData? dimenData, String fileName, List<int> mData) {
     final file = File(fileName);
     try {
@@ -98,9 +101,8 @@ class FileManagerHelper {
     }
   }
 
-  static String roundf(double mValue, [double divide = 100.0]) {
+  String _roundf(double mValue, [double divide = 100.0]) {
     final valueAfterCal = (mValue * 100).round() / divide;
     return valueAfterCal.toString();
   }
 }
-

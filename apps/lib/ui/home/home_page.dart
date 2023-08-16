@@ -10,29 +10,33 @@ class HomePage extends StatefulWidget {
   _HomePage createState() => _HomePage();
 }
 
-String projectUrl = "";
-
 class _HomePage extends State<HomePage> {
+  late HomeBloc bloc;
+  late String inputDimenData;
 
   @override
   Widget build(BuildContext context) {
-
-    final bloc = BlocProvider.of<HomeBloc>(context);
-
+    bloc = HomeBloc();
     return BlocProvider(
-      create: (BuildContext context) => HomeBloc(),
+      create: (BuildContext context) => bloc,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Your App'),
+          title: Text('Generate DPI'),
         ),
         body: Container(
+          padding: EdgeInsets.all(10),
           child: _ColumnBuilder(
             onWindowClosed: () {
               windowShouldClose(context);
             },
             onProjectSelected: () {
-              bloc.add(HomeEvent(projectUrl: "", inputText: "", dataOutput: []));
               selectDocumentFolder();
+            },
+            onGenerateButtonClicked: () {
+              bloc.add(GenerateDimenDataEvent(inputText: inputDimenData));
+            },
+            onNewDimenConfigClicked: () {
+              bloc.add(GenerateDimenDataEvent(inputText: inputDimenData));
             },
           ),
         ),
@@ -44,9 +48,7 @@ class _HomePage extends State<HomePage> {
     try {
       final result = await FilePicker.platform.getDirectoryPath();
       if (result != null) {
-        setState(() {
-          projectUrl = result;
-        });
+        bloc.add(UpdateURLEvent(projectUrl: result));
       }
     } on PlatformException catch (e) {
       print('Error: ${e.message}');
@@ -84,34 +86,80 @@ class _ColumnBuilder extends StatelessWidget {
   const _ColumnBuilder({
     required this.onProjectSelected,
     required this.onWindowClosed,
+    required this.onGenerateButtonClicked,
+    required this.onNewDimenConfigClicked,
     Key? key,
   }) : super(key: key);
 
   final VoidCallback? onProjectSelected;
   final VoidCallback? onWindowClosed;
+  final VoidCallback? onGenerateButtonClicked;
+  final VoidCallback? onNewDimenConfigClicked;
 
   @override
   Widget build(BuildContext context) {
+    String dimenInputText = "1,2,3,4,5";
+
     return LayoutBuilder(
       builder: (context, constraints) {
         return Column(
           children: [
-            _TopContainer(),
+            Container(
+              width: double.infinity,
+              height: 20,
+              color: Colors.white,
+              child: BlocBuilder<HomeBloc, HomeState>(
+                buildWhen: (previous, current) =>
+                previous.projectUrl != current.projectUrl,
+                builder: (_, state) => Text(state.projectUrl),
+              ),
+            ),
+            SizedBox(height: 10),
             ElevatedButton(
               onPressed: onProjectSelected,
               child: Text("Select project"),
             ),
+            SizedBox(height: 10),
             TextField(
-              decoration: InputDecoration(hintText: "1,2,3,4,5"),
-              // Use viewModel.inputText as controller value
+                decoration: InputDecoration(hintText: dimenInputText),
+                onChanged: (textChanged) {
+                  dimenInputText = textChanged;
+                }
             ),
+            SizedBox(height: 10),
             ElevatedButton(
-              onPressed: () {
-                // Call viewModel.pushDimensionData()
-              },
+              onPressed: onGenerateButtonClicked,
               child: Text("Generate Dimension"),
             ),
-            _DimensionInputRow(),
+            SizedBox(height: 10),
+            Row(
+              children: [
+                Text("Dimension"),
+                SizedBox(width: 10),
+                Container(
+                  width: 35,
+                  child: TextField(
+                    decoration: InputDecoration(hintText: "320"),
+                  ),
+                ),
+                SizedBox(width: 10),
+                Text("Ratio"),
+                SizedBox(width: 10),
+                Container(
+                  width: 35,
+                  child: TextField(
+                    decoration: InputDecoration(hintText: "1.0"),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: onNewDimenConfigClicked,
+                  child: Text("Add more"),
+                ),
+              ],
+            ),
+            SizedBox(height: 10),
             ElevatedButton(
               onPressed: onWindowClosed,
               child: Text("Close"),
@@ -123,55 +171,3 @@ class _ColumnBuilder extends StatelessWidget {
   }
 }
 
-class _TopContainer extends StatelessWidget {
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 20,
-      color: Colors.white,
-      padding: EdgeInsets.all(3),
-      child: Text(projectUrl),
-    );
-  }
-}
-
-class _DimensionInputRow extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Text("Dimension"),
-          SizedBox(width: 2),
-          Container(
-            width: 35,
-            child: TextField(
-              decoration: InputDecoration(hintText: "320"),
-              // Use viewModel.dimenAdd as controller value
-            ),
-          ),
-          SizedBox(width: 5),
-          Text("Ratio"),
-          SizedBox(width: 2),
-          Container(
-            width: 35,
-            child: TextField(
-              decoration: InputDecoration(hintText: "1.0"),
-              // Use viewModel.ratioAdd as controller value
-              keyboardType: TextInputType.number,
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Call addDimensionData() and handle duplicate alert
-            },
-            child: Text("Add more"),
-          ),
-        ],
-      ),
-    );
-  }
-}

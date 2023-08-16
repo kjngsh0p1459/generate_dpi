@@ -1,66 +1,41 @@
 import 'dart:async';
+import 'dart:ffi';
 
 import 'package:apps/entity/dimen_data.dart';
 import 'package:bloc/bloc.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:resources/resources.dart';
 
 import '../../../helper/file_manager_helper.dart';
-
 part 'home_event.dart';
 part 'home_state.dart';
 part 'home_bloc.freezed.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
+  var _projectUrl = "";
+  var _dataOutput = DimenData.defaultList;
+
   HomeBloc() : super(const HomeState()) {
-    on<HomeEvent>(
-      _pushHomeEvent,
-    );
+    on<UpdateURLEvent>(_handleUpdateURL);
 
-    on<HomeEvent>((event, emit) {
-    });
+    on<GenerateDimenDataEvent>(_generateDimensionData);
+
+    on<NewDimenConfigEvent>(_addNewDimenConfig);
   }
 
-  FutureOr<void> _pushHomeEvent(HomeEvent event, Emitter<HomeState> emit) {
-    emit(state.copyWith(
-
-    ));
-
+  FutureOr<void> _handleUpdateURL(
+      UpdateURLEvent event, Emitter<HomeState> emit) async {
+    _projectUrl = event.projectUrl;
+    emit(state.copyWith(projectUrl: event.projectUrl));
   }
 
-  final _projectUrl = BehaviorSubject<String>.seeded("");
-  final _inputText = BehaviorSubject<String>.seeded("");
-  final _dataOutput = BehaviorSubject<List<DimenData>>.seeded([]);
-  final _dimenAdd = BehaviorSubject<String>.seeded("360");
-  final _ratioAdd = BehaviorSubject<double>.seeded(1.1);
-
-  // Streams
-  Stream<String> get projectUrlStream => _projectUrl.stream;
-  Stream<String> get inputTextStream => _inputText.stream;
-  Stream<List<DimenData>> get dataOutputStream => _dataOutput.stream;
-  Stream<String> get dimenAddStream => _dimenAdd.stream;
-  Stream<double> get ratioAddStream => _ratioAdd.stream;
-
-  // Sink
-  Function(String) get updateProjectUrl => _projectUrl.sink.add;
-  Function(String) get updateInputText => _inputText.sink.add;
-  Function(List<DimenData>) get updateDataOutput => _dataOutput.sink.add;
-  Function(String) get updateDimenAdd => _dimenAdd.sink.add;
-  Function(double) get updateRatioAdd => _ratioAdd.sink.add;
-
-
-  void _initData() {
-    final initialData = DimenData.defaultList;
-    _dataOutput.add(initialData);
-    _sortListInputDimen();
-  }
-
-  void pushDimensionData() {
+  FutureOr<void> _generateDimensionData(
+      GenerateDimenDataEvent event, Emitter<HomeState> emit) async {
     final mDataOutput = <DimenData>[];
-    _dataOutput.value.forEach((db) {
-      final dataRawText = FileManagerHelper.handleData(
-        _projectUrl.value,
-        _inputText.value,
+    _dataOutput.forEach((db) {
+      final dataRawText = FileManagerHelper.shared.handleData(
+        _projectUrl,
+        event.inputText,
         db,
       );
       mDataOutput.add(DimenData(
@@ -70,43 +45,38 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         dataRawText: dataRawText,
       ));
     });
-    _dataOutput.add(mDataOutput);
+    _dataOutput.addAll(mDataOutput);
   }
 
-  bool addDimensionData() {
-    final dimen = int.tryParse(_dimenAdd.value);
-    if (dimen == null) return false;
-    if (_dataOutput.value.any((db) => db.dimen == dimen)) {
-      return false;
+  void _addNewDimenConfig(NewDimenConfigEvent event, Emitter<HomeState> emit) async {
+    final dimen = int.tryParse(event.dimenAdd);
+    if (dimen == null) {
+      return;
+    }
+    if (_dataOutput.any((db) => db.dimen == dimen)) {
+      return;
     } else {
       final newData = DimenData(
-        position: _dataOutput.value.length,
+        position: _dataOutput.length,
         dimen: dimen,
-        ratio: _ratioAdd.value,
+        ratio: event.ratioAdd,
         dataRawText: "",
       );
-      _dataOutput.add([..._dataOutput.value, newData]);
+      _dataOutput.add(newData);
       _sortListInputDimen();
-      return true;
+      return;
     }
   }
 
-  void _sortListInputDimen() {
-    final sortedData = [..._dataOutput.value]
+  void _sortListInputDimen() async {
+    var sortedData = [..._dataOutput]
       ..sort((a, b) => (a.dimen ?? 0).compareTo(b.dimen ?? 0));
 
-    // for (var index = 0; index < sortedData.length; index++) {
-    //   sortedData[index].position = index;
-    // }
-
-    _dataOutput.add(sortedData);
-  }
-
-  void dispose() {
-    _projectUrl.close();
-    _inputText.close();
-    _dataOutput.close();
-    _dimenAdd.close();
-    _ratioAdd.close();
+    for (var index = 0; index < sortedData.length; index++) {
+      final item = sortedData[index];
+      sortedData[index] =
+          DimenData(position: index, dimen: item.dimen, ratio: item.ratio);
+    }
+    _dataOutput = sortedData;
   }
 }
