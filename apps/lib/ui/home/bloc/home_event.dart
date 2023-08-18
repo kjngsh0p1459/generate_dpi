@@ -19,6 +19,6 @@ class GenerateDimenDataEvent extends HomeEvent with _$GenerateDimenDataEvent {
 @freezed
 class NewDimenConfigEvent extends HomeEvent with _$NewDimenConfigEvent {
   const factory NewDimenConfigEvent(
-      {@Default("") String dimenAdd,
-      @Default(1.1) double ratioAdd}) = _NewDimenConfigEvent;
+      {@Default("") String dimenConfigInputText,
+      @Default("") String ratioInputText}) = _NewDimenConfigEvent;
 }

@@ -1,8 +1,8 @@
 name: generate_dpi
 
 packages:
-  - resources/**
-  - apps/**
+  - resources
+  - apps
 
 command:
   bootstrap:

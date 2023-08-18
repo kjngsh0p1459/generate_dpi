@@ -7,8 +7,11 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:resources/resources.dart';
 
 import '../../../helper/file_manager_helper.dart';
+
 part 'home_event.dart';
+
 part 'home_state.dart';
+
 part 'home_bloc.freezed.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
@@ -48,8 +51,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     _dataOutput.addAll(mDataOutput);
   }
 
-  void _addNewDimenConfig(NewDimenConfigEvent event, Emitter<HomeState> emit) async {
-    final dimen = int.tryParse(event.dimenAdd);
+  FutureOr<void> _addNewDimenConfig(
+      NewDimenConfigEvent event, Emitter<HomeState> emit) async {
+    final dimen = int.tryParse(event.dimenConfigInputText);
+    final ratio = double.tryParse(event.ratioInputText) ?? 0.0;
     if (dimen == null) {
       return;
     }
@@ -59,16 +64,29 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final newData = DimenData(
         position: _dataOutput.length,
         dimen: dimen,
-        ratio: event.ratioAdd,
+        ratio: ratio,
         dataRawText: "",
       );
       _dataOutput.add(newData);
       _sortListInputDimen();
+      String dimenListConfigText = await getDefaultListConfigLabel();
+      emit(state.copyWith(dimenListConfigText: dimenListConfigText));
       return;
     }
   }
 
-  void _sortListInputDimen() async {
+  Future<String> getDefaultListConfigLabel() async {
+    late String labels = "";
+    _dataOutput.forEach((element) {
+      if (element.dimen != null) {
+        String label = '${labels.isEmpty ? "" : ", "} ${element.dimen.toString()}';
+        labels += label;
+      }
+    });
+    return labels;
+  }
+
+  FutureOr<void> _sortListInputDimen() async {
     var sortedData = [..._dataOutput]
       ..sort((a, b) => (a.dimen ?? 0).compareTo(b.dimen ?? 0));
 

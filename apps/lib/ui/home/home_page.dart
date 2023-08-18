@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:resources/resources.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -12,7 +13,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePage extends State<HomePage> {
   late HomeBloc bloc;
-  late String inputDimenData;
 
   @override
   Widget build(BuildContext context) {
@@ -21,22 +21,24 @@ class _HomePage extends State<HomePage> {
       create: (BuildContext context) => bloc,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Generate DPI'),
+          title: Text("Generate App"),
         ),
         body: Container(
-          padding: EdgeInsets.all(10),
+          padding: EdgeInsets.all(20),
           child: _ColumnBuilder(
             onWindowClosed: () {
-              windowShouldClose(context);
+              _windowShouldClose(context);
             },
             onProjectSelected: () {
-              selectDocumentFolder();
+              _selectDocumentFolder();
             },
-            onGenerateButtonClicked: () {
-              bloc.add(GenerateDimenDataEvent(inputText: inputDimenData));
+            onGenerateButtonClicked: (dimenInputText) {
+              bloc.add(GenerateDimenDataEvent(inputText: dimenInputText));
             },
-            onNewDimenConfigClicked: () {
-              bloc.add(GenerateDimenDataEvent(inputText: inputDimenData));
+            onNewDimenConfigClicked: (dimenConfigInputText, ratioInputText) {
+              bloc.add(NewDimenConfigEvent(
+                  dimenConfigInputText: dimenConfigInputText,
+                  ratioInputText: ratioInputText));
             },
           ),
         ),
@@ -44,7 +46,7 @@ class _HomePage extends State<HomePage> {
     );
   }
 
-  Future<void> selectDocumentFolder() async {
+  Future<void> _selectDocumentFolder() async {
     try {
       final result = await FilePicker.platform.getDirectoryPath();
       if (result != null) {
@@ -55,7 +57,7 @@ class _HomePage extends State<HomePage> {
     }
   }
 
-  void windowShouldClose(BuildContext context) {
+  void _windowShouldClose(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -93,12 +95,14 @@ class _ColumnBuilder extends StatelessWidget {
 
   final VoidCallback? onProjectSelected;
   final VoidCallback? onWindowClosed;
-  final VoidCallback? onGenerateButtonClicked;
-  final VoidCallback? onNewDimenConfigClicked;
+  final Function(String)? onGenerateButtonClicked;
+  final Function(String, String)? onNewDimenConfigClicked;
 
   @override
   Widget build(BuildContext context) {
     String dimenInputText = "1,2,3,4,5";
+    String ratioInputText = "1.0";
+    String dimenConfigInputText = "320";
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -110,26 +114,33 @@ class _ColumnBuilder extends StatelessWidget {
               color: Colors.white,
               child: BlocBuilder<HomeBloc, HomeState>(
                 buildWhen: (previous, current) =>
-                previous.projectUrl != current.projectUrl,
+                    previous.projectUrl != current.projectUrl,
                 builder: (_, state) => Text(state.projectUrl),
               ),
             ),
             SizedBox(height: 10),
             ElevatedButton(
               onPressed: onProjectSelected,
-              child: Text("Select project"),
+              child: Text("Select generate folder"),
             ),
             SizedBox(height: 10),
             TextField(
                 decoration: InputDecoration(hintText: dimenInputText),
                 onChanged: (textChanged) {
                   dimenInputText = textChanged;
-                }
-            ),
+                }),
             SizedBox(height: 10),
             ElevatedButton(
-              onPressed: onGenerateButtonClicked,
+              onPressed: () {
+                onGenerateButtonClicked?.call(dimenInputText);
+              },
               child: Text("Generate Dimension"),
+            ),
+            SizedBox(height: 10),
+            BlocBuilder<HomeBloc, HomeState>(
+              buildWhen: (previous, current) =>
+                  previous.dimenListConfigText != current.dimenListConfigText,
+              builder: (_, state) => Text(state.dimenListConfigText),
             ),
             SizedBox(height: 10),
             Row(
@@ -139,7 +150,10 @@ class _ColumnBuilder extends StatelessWidget {
                 Container(
                   width: 35,
                   child: TextField(
-                    decoration: InputDecoration(hintText: "320"),
+                    decoration: InputDecoration(hintText: dimenConfigInputText),
+                    onChanged: (textChanged) {
+                      dimenConfigInputText = textChanged;
+                    },
                   ),
                 ),
                 SizedBox(width: 10),
@@ -148,14 +162,20 @@ class _ColumnBuilder extends StatelessWidget {
                 Container(
                   width: 35,
                   child: TextField(
-                    decoration: InputDecoration(hintText: "1.0"),
+                    decoration: InputDecoration(hintText: ratioInputText),
                     keyboardType: TextInputType.number,
+                    onChanged: (textChanged) {
+                      ratioInputText = textChanged;
+                    },
                   ),
                 ),
                 SizedBox(width: 10),
                 ElevatedButton(
-                  onPressed: onNewDimenConfigClicked,
-                  child: Text("Add more"),
+                  onPressed: () {
+                    onNewDimenConfigClicked?.call(
+                        dimenConfigInputText, ratioInputText);
+                  },
+                  child: Text("Add config"),
                 ),
               ],
             ),
@@ -170,4 +190,3 @@ class _ColumnBuilder extends StatelessWidget {
     );
   }
 }
-
