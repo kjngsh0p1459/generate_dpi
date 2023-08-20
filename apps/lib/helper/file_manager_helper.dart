@@ -3,36 +3,46 @@ import 'dart:io';
 import '../entity/dimen_data.dart';
 
 class FileManagerHelper {
-
   static final FileManagerHelper _instance = FileManagerHelper();
 
   static FileManagerHelper shared = _instance;
 
-  String handleData(String inputProjectUrl, String inputPlainText, DimenData dimenData) {
-    final mProjectUrl = dimenData.dimen == null ? "values" : "values-sw${dimenData.dimen}dp";
-    final listInputPlainText = inputPlainText.split(',');
-    // final folderName = "$inputProjectUrl/app/src/main/res/$mProjectUrl";
+  Future<String> handleData(String inputProjectUrl, String inputPlainText,
+      DimenData dimenData) async {
+    final mProjectUrl = dimenData.dimen == DimenData.baseRatio
+        ? "values"
+        : "values-sw${dimenData.dimen}dp";
+    List<String> listInputPlainText = [];
+    if (inputPlainText.contains("->")) {
+      final fromValue = int.parse(inputPlainText.split('->').first);
+      final toValue = int.parse(inputPlainText.split('->').last);
+      for (var i = fromValue; i <= toValue; i++) {
+        listInputPlainText.add(i.toString());
+      }
+    } else {
+      listInputPlainText = inputPlainText.split(',');
+    }
     final folderName = "$inputProjectUrl/$mProjectUrl";
     final fileName = "$folderName/dimens.xml";
     _createFolderIfNotExisted(folderName);
-    final outputDimenPlainText = _getDimensionPlainText(listInputPlainText, dimenData);
-    final mData = _readFileData(fileName);
-    final fileData = _sortDimensionTextBeforeWrite(mData, outputDimenPlainText);
+    final outputDimenPlainText =
+        await _getDimensionPlainText(listInputPlainText, dimenData);
+    final mData = await _readFileData(fileName);
+    final fileData = await _sortDimensionTextBeforeWrite(mData, outputDimenPlainText);
     final content = fileData.join('\n');
     _writeDataToFile(dimenData, fileName, utf8.encode(content));
     return content;
   }
 
-  void _createFolderIfNotExisted(String folderName) {
+  Future<void> _createFolderIfNotExisted(String folderName) async {
     if (!Directory(folderName).existsSync()) {
-      final documentDirectory = Directory.systemTemp;
       final folder = Directory('$folderName');
       folder.createSync(recursive: true);
     }
   }
 
-  List<String> _getDimensionPlainText(
-      List<String> listInputPlainText, DimenData dimenData) {
+  Future<List<String>> _getDimensionPlainText(
+      List<String> listInputPlainText, DimenData dimenData) async {
     final listDimenParamName = <String>[];
     final uniqueListDimen = <double>{};
     for (final p in listInputPlainText) {
@@ -45,34 +55,33 @@ class FileManagerHelper {
 
     for (final mDimen in sortedListDimen) {
       final prefix = '<dimen name="dimens_new_${mDimen.toInt()}dp">';
-      listDimenParamName
-          .add('$prefix${_roundf(mDimen * (dimenData.ratio))}dp</dimen>');
+      final result = (mDimen * dimenData.getRatio()).toStringAsFixed(2);
+      listDimenParamName.add('$prefix${result}dp</dimen>');
     }
     return listDimenParamName;
   }
 
-  List<String> _sortDimensionTextBeforeWrite(
-      String data, List<String> outputDimenPlainText) {
-    final firstLine = '<?xml version="1.0" encoding="utf-8"?>';
-    final secondLine = '<resources>';
+  Future<List<String>> _sortDimensionTextBeforeWrite(
+      String data, List<String> outputDimenPlainText) async {
+    final prefix = '<?xml version="1.0" encoding="utf-8"?>\n<resources>';
+    final suffix = '</resources>';
     final oldData = data;
     final newData = <String>[];
-    oldData.split('\n').forEach((p) {
-      if (!outputDimenPlainText.contains(p.trim())) {
-        newData.add(p);
+    if (oldData.isNotEmpty) {
+      final listData = oldData.split('\n');
+      for (var i = 2; i < listData.length - 1; i++) {
+        if (!outputDimenPlainText.contains(listData[i].trim())) {
+          newData.add(listData[i]);
+        }
       }
-    });
-    newData.removeLast();
-    newData.addAll(outputDimenPlainText.map((p) => '\t$p'));
-    if (newData.first != firstLine) {
-      newData.insert(0, firstLine);
-      newData.insert(1, secondLine);
     }
-    newData.add('</resources>');
+    newData.addAll(outputDimenPlainText.map((p) => '\t$p'));
+    newData.insert(0, prefix);
+    newData.add(suffix);
     return newData;
   }
 
-  String _readFileData(String fileName) {
+  Future<String> _readFileData(String fileName) async {
     final file = File(fileName);
     if (file.existsSync()) {
       try {
@@ -80,17 +89,17 @@ class FileManagerHelper {
         print('Read data successfully');
         return savedData;
       } catch (error) {
-        print('Error $error');
+        print('Error: $error');
       }
     }
     return '';
   }
 
-  void _writeDataToFile(
-      DimenData? dimenData, String fileName, List<int> mData) {
+  Future<void> _writeDataToFile(
+      DimenData? dimenData, String fileName, List<int> mData) async {
     final file = File(fileName);
     try {
-      file.writeAsBytesSync(mData);
+      await {file.writeAsBytesSync(mData)};
       if (dimenData?.dimen != null) {
         print('File saved: ${dimenData?.dimen}');
       } else {
@@ -99,10 +108,5 @@ class FileManagerHelper {
     } catch (error) {
       print('Error $error');
     }
-  }
-
-  String _roundf(double mValue, [double divide = 100.0]) {
-    final valueAfterCal = (mValue * 100).round() / divide;
-    return valueAfterCal.toString();
   }
 }

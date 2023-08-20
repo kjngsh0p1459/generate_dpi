@@ -20,5 +20,13 @@ class GenerateDimenDataEvent extends HomeEvent with _$GenerateDimenDataEvent {
 class NewDimenConfigEvent extends HomeEvent with _$NewDimenConfigEvent {
   const factory NewDimenConfigEvent(
       {@Default("") String dimenConfigInputText,
-      @Default("") String ratioInputText}) = _NewDimenConfigEvent;
+      }) = _NewDimenConfigEvent;
 }
+
+@freezed
+class SetBaseConfigEvent extends HomeEvent with _$SetBaseConfigEvent {
+  const factory SetBaseConfigEvent(
+      {@Default(390) int baseConfigInputText,
+      }) = _SetBaseConfigEvent;
+}
+

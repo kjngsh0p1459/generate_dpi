@@ -45,10 +45,10 @@ class AppDimen {
         return mobile.w;
       case ScreenType.tablet:
         return tablet?.w ??
-            ((mobile * DeviceConstants.maxMobileWidth) / DeviceConstants.designDeviceWidth);
+            ((mobile * 1) / 1);
       case ScreenType.ultraTablet:
         return ultraTablet?.w ??
-            ((mobile * DeviceConstants.maxMobileWidth) / DeviceConstants.designDeviceWidth);
+            ((mobile * 1) / 1);
     }
   }
 
@@ -68,13 +68,14 @@ class AppDimen {
   }
 
   static ScreenType _getScreenType(double screenWidth) {
-    if (screenWidth <= DeviceConstants.maxMobileWidth) {
-      return ScreenType.mobile;
-    } else if (screenWidth <= DeviceConstants.maxTabletWidth) {
-      return ScreenType.tablet;
-    } else {
-      return ScreenType.ultraTablet;
-    }
+    // if (screenWidth <= DeviceConstants.maxMobileWidth) {
+    //   return ScreenType.mobile;
+    // } else if (screenWidth <= DeviceConstants.maxTabletWidth) {
+    //   return ScreenType.tablet;
+    // } else {
+    //   return ScreenType.ultraTablet;
+    // }
+    return ScreenType.mobile;
   }
 }
 

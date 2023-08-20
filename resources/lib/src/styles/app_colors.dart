@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:resources/resources.dart';
 
 class AppColors {
   const AppColors({
@@ -17,6 +18,14 @@ class AppColors {
   final Color secondaryTextColor;
 
   final LinearGradient primaryGradient;
+
+  static AppColors of(BuildContext context) {
+    final appColor = Theme.of(context).appColor;
+
+    current = appColor;
+
+    return current;
+  }
 
   static const defaultAppColor = AppColors(
     primaryColor: Color.fromARGB(255, 166, 168, 254),

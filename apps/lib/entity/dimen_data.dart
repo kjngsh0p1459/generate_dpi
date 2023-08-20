@@ -6,22 +6,30 @@ part 'dimen_data.freezed.dart';
 class DimenData with _$DimenData {
   const DimenData._();
 
+  static int baseRatio = 390;
+
   const factory DimenData({
     required int position,
-    required int? dimen,
-    required double ratio,
+    required int dimen,
     @Default("") String dataRawText,
   }) = _DimenData;
 
-  static List<DimenData> _defaultList = [
-    DimenData(position: 0, dimen: 320, ratio: 1),
-    DimenData(position: 1, dimen: 360, ratio: 1.125),
-    DimenData(position: 2, dimen: 411, ratio: 1.125),
-    DimenData(position: 3, dimen: 460, ratio: 1.125),
-    DimenData(position: 4, dimen: 480, ratio: 1.437),
-    DimenData(position: 5, dimen: 600, ratio: 1.5),
-    DimenData(position: 6, dimen: 720, ratio: 1.875),
-    DimenData(position: 7, dimen: null, ratio: 1),
+  double getRatio() {
+    final result = (dimen / baseRatio).toStringAsFixed(2);
+    double roundedNum = double.parse(result);
+    return roundedNum;
+  }
+
+
+  static final List<DimenData> _defaultList = [
+    const DimenData(position: 0, dimen: 320),
+    const DimenData(position: 1, dimen: 360),
+    const DimenData(position: 2, dimen: 411),
+    const DimenData(position: 3, dimen: 460),
+    const DimenData(position: 4, dimen: 480),
+    const DimenData(position: 5, dimen: 600),
+    const DimenData(position: 6, dimen: 720),
+    const DimenData(position: 7, dimen: 390),
   ];
 
   static List<DimenData> get defaultList => _defaultList;

@@ -16,7 +16,7 @@ class AppTextStyles {
     double? ultraTablet,
   }) =>
       _baseTextStyle.merge(TextStyle(
-        fontSize: Dimens.d14.responsive(tablet: tablet, ultraTablet: ultraTablet),
+        fontSize: Dimens.d14,
         fontWeight: FontWeight.w400,
         color: AppColors.current.primaryTextColor,
       ));
@@ -26,7 +26,7 @@ class AppTextStyles {
     double? ultraTablet,
   }) =>
       _baseTextStyle.merge(TextStyle(
-        fontSize: Dimens.d14.responsive(tablet: tablet, ultraTablet: ultraTablet),
+        fontSize: Dimens.d14,
         fontWeight: FontWeight.w400,
         color: AppColors.current.secondaryTextColor,
       ));

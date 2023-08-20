@@ -1,4 +1,7 @@
 import 'dart:io';
+import 'package:apps/entity/dimen_data.dart';
+import 'package:apps/shared_view/app_label.dart';
+import 'package:apps/shared_view/app_text_field.dart';
 import 'package:apps/ui/home/bloc/home_bloc.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -12,181 +15,190 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePage extends State<HomePage> {
-  late HomeBloc bloc;
+  late final HomeBloc _bloc = HomeBloc();
+  final _dimenInputTextController = TextEditingController();
+  final _baseConfigTextController = TextEditingController();
+  final _dimenConfigInputTextController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-    bloc = HomeBloc();
-    return BlocProvider(
-      create: (BuildContext context) => bloc,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => _bloc),
+      ],
       child: Scaffold(
         appBar: AppBar(
-          title: Text("Generate App"),
+          title: Text(S.current.app_name),
         ),
-        body: Container(
-          padding: EdgeInsets.all(20),
-          child: _ColumnBuilder(
-            onWindowClosed: () {
-              _windowShouldClose(context);
-            },
-            onProjectSelected: () {
-              _selectDocumentFolder();
-            },
-            onGenerateButtonClicked: (dimenInputText) {
-              bloc.add(GenerateDimenDataEvent(inputText: dimenInputText));
-            },
-            onNewDimenConfigClicked: (dimenConfigInputText, ratioInputText) {
-              bloc.add(NewDimenConfigEvent(
-                  dimenConfigInputText: dimenConfigInputText,
-                  ratioInputText: ratioInputText));
-            },
-          ),
-        ),
+        body: BlocPageListeners(
+            child: Container(
+          padding: EdgeInsets.all(Dimens.d20.responsive()),
+          child: _ColumnBuilder(context),
+        )),
       ),
     );
+  }
+
+  Widget BlocPageListeners({required Widget child}) {
+    return
+        BlocListener<HomeBloc, HomeState>(
+          listenWhen: (previous, current) => !previous.isNeedAlert && current.isNeedAlert,
+          listener: (context, state) {
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return getWarningDialog(S.current.generateFailDialog, () {
+                  Navigator.of(context).pop();
+                }, () {
+                  Navigator.of(context).pop();
+                });
+              },
+            );
+            },
+            child: child
+        );
   }
 
   Future<void> _selectDocumentFolder() async {
     try {
       final result = await FilePicker.platform.getDirectoryPath();
       if (result != null) {
-        bloc.add(UpdateURLEvent(projectUrl: result));
+        _bloc.add(UpdateURLEvent(projectUrl: result));
       }
     } on PlatformException catch (e) {
       print('Error: ${e.message}');
     }
   }
 
-  void _windowShouldClose(BuildContext context) {
+  Future<void> _windowShouldClose(BuildContext context) async {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Quit"),
-          content: Text("Are you sure?"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                exit(0);
-              },
-              child: Text("Yes"),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text("No"),
-            ),
-          ],
-        );
+        return getWarningDialog(S.current.confirm, () {
+          exit(0);
+        }, () {
+          Navigator.of(context).pop();
+        });
       },
     );
   }
-}
 
-class _ColumnBuilder extends StatelessWidget {
-  const _ColumnBuilder({
-    required this.onProjectSelected,
-    required this.onWindowClosed,
-    required this.onGenerateButtonClicked,
-    required this.onNewDimenConfigClicked,
-    Key? key,
-  }) : super(key: key);
+  AlertDialog getWarningDialog(String content, Function ok, Function cancel) {
+    return AlertDialog(
+      title: Text(S.current.quit),
+      content: Text(content),
+      actions: [
+        TextButton(
+          onPressed: () {
+            ok.call();
+          },
+          child: Text(S.current.ok),
+        ),
+        TextButton(
+          onPressed: () {
+            cancel.call();
+          },
+          child: Text(S.current.cancel),
+        ),
+      ],
+    );
+  }
 
-  final VoidCallback? onProjectSelected;
-  final VoidCallback? onWindowClosed;
-  final Function(String)? onGenerateButtonClicked;
-  final Function(String, String)? onNewDimenConfigClicked;
-
-  @override
-  Widget build(BuildContext context) {
-    String dimenInputText = "1,2,3,4,5";
-    String ratioInputText = "1.0";
-    String dimenConfigInputText = "320";
-
+  Widget _ColumnBuilder(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return Column(
           children: [
-            Container(
-              width: double.infinity,
-              height: 20,
-              color: Colors.white,
-              child: BlocBuilder<HomeBloc, HomeState>(
-                buildWhen: (previous, current) =>
-                    previous.projectUrl != current.projectUrl,
-                builder: (_, state) => Text(state.projectUrl),
-              ),
-            ),
-            SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: onProjectSelected,
-              child: Text("Select generate folder"),
-            ),
-            SizedBox(height: 10),
-            TextField(
-                decoration: InputDecoration(hintText: dimenInputText),
-                onChanged: (textChanged) {
-                  dimenInputText = textChanged;
-                }),
-            SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () {
-                onGenerateButtonClicked?.call(dimenInputText);
-              },
-              child: Text("Generate Dimension"),
-            ),
-            SizedBox(height: 10),
             BlocBuilder<HomeBloc, HomeState>(
               buildWhen: (previous, current) =>
-                  previous.dimenListConfigText != current.dimenListConfigText,
+              previous.projectUrl != current.projectUrl,
+              builder: (_, state) => AppLabel(title: S.current.generateURLTitle, content: state.projectUrl),
+            ),
+            SizedBox(height: Dimens.d10.responsive()),
+            ElevatedButton(
+              onPressed: () { _selectDocumentFolder(); },
+              child: Text(S.current.selectFolder),
+            ),
+            SizedBox(height: Dimens.d10.responsive()),
+            AppTextField(
+              hintText: S.current.dimenInputHintText,
+              controller: _dimenInputTextController, title: S.current.dimenTitle,
+            ),
+            SizedBox(height: Dimens.d10.responsive()),
+            ElevatedButton(
+              onPressed: () {
+                _bloc.add(GenerateDimenDataEvent(inputText: _dimenInputTextController.text));
+                },
+              child: Text(S.current.generateDimen),
+            ),
+            SizedBox(height: Dimens.d10.responsive()),
+            BlocBuilder<HomeBloc, HomeState>(
+              buildWhen: (previous, current) =>
+              previous.dimenListConfigText != current.dimenListConfigText,
               builder: (_, state) => Text(state.dimenListConfigText),
             ),
-            SizedBox(height: 10),
+            SizedBox(height: Dimens.d10.responsive()),
             Row(
               children: [
-                Text("Dimension"),
-                SizedBox(width: 10),
-                Container(
-                  width: 35,
-                  child: TextField(
-                    decoration: InputDecoration(hintText: dimenConfigInputText),
-                    onChanged: (textChanged) {
-                      dimenConfigInputText = textChanged;
-                    },
+                Text(S.current.baseConfigTitle),
+                SizedBox(width: Dimens.d10.responsive()),
+                SizedBox(
+                  width: Dimens.d35.responsive(),
+                  child: AppTextField(
+                      hintText: DimenData.baseRatio.toString(),
+                      controller: _baseConfigTextController
                   ),
                 ),
-                SizedBox(width: 10),
-                Text("Ratio"),
-                SizedBox(width: 10),
-                Container(
-                  width: 35,
-                  child: TextField(
-                    decoration: InputDecoration(hintText: ratioInputText),
-                    keyboardType: TextInputType.number,
-                    onChanged: (textChanged) {
-                      ratioInputText = textChanged;
-                    },
-                  ),
-                ),
-                SizedBox(width: 10),
+                SizedBox(width: Dimens.d10.responsive()),
                 ElevatedButton(
                   onPressed: () {
-                    onNewDimenConfigClicked?.call(
-                        dimenConfigInputText, ratioInputText);
+                    _bloc.add(SetBaseConfigEvent(
+                        baseConfigInputText: int.parse(_baseConfigTextController.text)));
                   },
-                  child: Text("Add config"),
+                  child: Text(S.current.setConfig),
                 ),
               ],
             ),
-            SizedBox(height: 10),
+            Row(
+              children: [
+                Text(S.current.dimen),
+                SizedBox(width: Dimens.d10.responsive()),
+                SizedBox(
+                  width: Dimens.d35.responsive(),
+                  child: AppTextField(
+                      hintText: S.current.empty,
+                      controller: _dimenConfigInputTextController
+                  ),
+                ),
+                SizedBox(width: Dimens.d10.responsive()),
+                ElevatedButton(
+                  onPressed: () {
+                    _bloc.add(NewDimenConfigEvent(
+                        dimenConfigInputText: _dimenConfigInputTextController.text));
+                    },
+                  child: Text(S.current.addConfig),
+                ),
+              ],
+            ),
+            SizedBox(height: Dimens.d10.responsive()),
             ElevatedButton(
-              onPressed: onWindowClosed,
-              child: Text("Close"),
+              onPressed:  ()
+        {
+          _windowShouldClose(context);
+        },
+                child: Text(S.current.close),
             ),
           ],
         );
       },
     );
   }
+
+  @override
+  void dispose() {
+    _dimenInputTextController.dispose();
+    _dimenConfigInputTextController.dispose();
+    super.dispose();
+  }
 }
+
